@@ -1,0 +1,6 @@
+{
+  "name": "dirtdealfinder-core",
+  "private": true,
+  "type": "module",
+  "description": "Silnik skanera bez przeglądarki (wersja serwerowa). Pliki z nagłówkiem WYGENEROWANE powstają z public/index.html: node tools/sync-core.mjs"
+}

@@ -3,6 +3,12 @@
 Skaner Kleinanzeigen.de szukający niedoszacowanych rowerów MTB (full, dirt, e-MTB) do odsprzedaży w Polsce.
 Szczegółowa wiedza (HTML Kleinanzeigen, przebieg analizy, decyzje, historia wersji, pomysły): **docs/NOTATKI.md**.
 
+## To repo: bikefinder70 (wersja serwerowa w budowie)
+- Kopia `bikefinder-69` w wersji v6.5 (13.11.2026) + budowana wersja serwerowa (VPS, bez karty Chrome). **Działający skaner to nadal `bikefinder-69` na Vercelu** — to repo nie jest podpięte do Vercela. Stan prac i kolejne kroki: `docs/SERWER.md`.
+- `public/index.html`, `api/` i dotychczasowe testy to **wzorzec** — tutaj ich nie zmieniamy (poza przeniesieniem nowszej wersji z `bikefinder-69`). Dlatego `APP_VERSION` w tym repo się nie podbija; zamiast niej PR podbija `ENGINE_VERSION` w `core/version.js`.
+- `core/` — silnik bez przeglądarki. Pliki z nagłówkiem „WYGENEROWANE” powstają z góry `index.html` poleceniem `node tools/sync-core.mjs` — nie edytować ręcznie. Testy zgodności ze wzorcem: `tests/core/` (wchodzą w `node tests/run-all.mjs`).
+- Zasady poniżej (po polsku, gałąź + PR, merge klika właściciel, testy przed PR) obowiązują bez zmian. Zapisy o Vercelu, karcie Chrome i localStorage opisują wzorzec.
+
 ## Zasady współpracy (ustalone z właścicielem — obowiązują zawsze)
 - Rozmawiamy **po polsku**.
 - **Najpierw ustalamy plan, zakres i rozwiązanie. Kod dopiero na wyraźne polecenie** („rób”, „koduj”, „wdrażaj”). Nie zaczynaj zmian z własnej inicjatywy.
