@@ -5,15 +5,24 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
-import { buildCore, diffCore, prefixLines, appScript, MODULES } from "../../tools/sync-core.mjs";
+import { buildCore, buildAll, buildCopies, copyHeader, diffCore, prefixLines, appScript, MODULES, COPIES } from "../../tools/sync-core.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const html = fs.readFileSync(path.join(ROOT, "public/index.html"), "utf8");
 const { files, chunks } = buildCore(html);
 
-// 1. core/ na dysku = wynik generatora
-assert.deepEqual(diffCore(files), [], "core/ nie zgadza się z public/index.html — uruchom: node tools/sync-core.mjs");
-console.log(`✅ core/ zgodne z public/index.html (${Object.keys(files).length} plików)`);
+// 1. core/ na dysku = wynik generatora (moduły z index.html + kopie pośredników z api/)
+const all = buildAll().files;
+assert.deepEqual(diffCore(all), [], "core/ nie zgadza się ze wzorcem — uruchom: node tools/sync-core.mjs");
+console.log(`✅ core/ zgodne ze wzorcem (${Object.keys(files).length} plików z index.html + ${Object.keys(COPIES).length} z api/)`);
+// kopie pośredników: po zdjęciu nagłówka plik jest identyczny z api/*.js co do znaku
+for (const [file, c] of Object.entries(COPIES)) {
+  const copy = fs.readFileSync(path.join(ROOT, "core", file), "utf8");
+  assert.ok(copy.startsWith(copyHeader(c)), `core/${file}: brak nagłówka pliku generowanego`);
+  assert.equal(copy.slice(copyHeader(c).length), fs.readFileSync(path.join(ROOT, c.from), "utf8"), `core/${file} różni się od ${c.from}`);
+}
+assert.notEqual(buildCopies((rel) => "zmienione")["providers/discord.js"], all["providers/discord.js"]);
+console.log(`✅ ${Object.keys(COPIES).length} pośredników skopiowanych z api/ bez zmian`);
 
 // 2. każdy kawałek kodu jest w index.html znak w znak, a w pliku core/ różni się tylko słowem „export”
 const script = appScript(html);

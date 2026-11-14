@@ -74,7 +74,15 @@ export const MODULES = {
   },
 };
 
-const HEADER_MARK = "// WYGENEROWANE przez tools/sync-core.mjs z public/index.html";
+// Pośrednicy z api/*.js (AI + zdjęcia, Discord, pobieranie stron) — całe pliki kopiowane bez zmian. Na serwerze są
+// wywoływani w tym samym procesie (core/providers/api.js), a nie przez HTTP do Vercela.
+export const COPIES = {
+  "providers/ai.js": { from: "api/gemini.js", about: "Pośrednik AI: Gemini, Groq, Anthropic; pobieranie i cache zdjęć ogłoszenia." },
+  "providers/discord.js": { from: "api/discord.js", about: "Wysyłka na webhooki Discorda." },
+  "providers/scrape.js": { from: "api/scrape.js", about: "Pobieranie stron kleinanzeigen.de (strony wyników przycinane do kart)." },
+};
+
+const HEADER_MARK = "// WYGENEROWANE przez tools/sync-core.mjs";
 const DECL_RE = /^(?:const|let|var|function|async function)\s+([A-Za-z_$][\w$]*)/;
 const END_RE = /^const SC = \{/; // pierwsza rzecz należąca już do interfejsu (style statusów) — dalej jest React
 const isFiller = (l) => l.trim() === "" || l.startsWith("//");
@@ -171,7 +179,7 @@ export const buildCore = (html) => {
     });
     const body = mine.map(c => (c.comment ? c.comment + "\n" : "") + "export " + c.code).join("\n\n");
     files[file] = [
-      `${HEADER_MARK} — NIE EDYTUJ RĘCZNIE.`,
+      `${HEADER_MARK} z public/index.html — NIE EDYTUJ RĘCZNIE.`,
       "// Zmiany wprowadzaj w public/index.html, potem uruchom: node tools/sync-core.mjs",
       `// ${mod.about}`,
       ...(imports.length ? ["", ...imports] : []),
@@ -183,13 +191,24 @@ export const buildCore = (html) => {
   return { files, chunks };
 };
 
+// Kopie całych plików z api/ (z nagłówkiem). read(ścieżka względem repo) → tekst.
+export const copyHeader = (c) => `${HEADER_MARK} z ${c.from} — NIE EDYTUJ RĘCZNIE.\n// Zmiany wprowadzaj w ${c.from}, potem uruchom: node tools/sync-core.mjs\n// ${c.about}\n\n`;
+export const buildCopies = (read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8")) =>
+  Object.fromEntries(Object.entries(COPIES).map(([file, c]) => [file, copyHeader(c) + read(c.from)]));
+
+// Wszystko, co narzędzie wytwarza: moduły z index.html + kopie z api/
+export const buildAll = () => {
+  const { files, chunks } = buildCore(fs.readFileSync(INDEX, "utf8"));
+  return { files: { ...files, ...buildCopies() }, chunks };
+};
+
 // Porównuje wygenerowane pliki z tym, co leży w core/. Zwraca listę różnic (pusta = zgodne).
 export const diffCore = (files) => {
   const out = [];
   for (const [file, text] of Object.entries(files)) {
     const p = path.join(CORE, file);
     if (!fs.existsSync(p)) out.push(`brak pliku core/${file}`);
-    else if (fs.readFileSync(p, "utf8") !== text) out.push(`core/${file} różni się od public/index.html`);
+    else if (fs.readFileSync(p, "utf8") !== text) out.push(`core/${file} różni się od ${COPIES[file]?.from || "public/index.html"}`);
   }
   const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap(e =>
     e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
@@ -201,11 +220,11 @@ export const diffCore = (files) => {
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { files } = buildCore(fs.readFileSync(INDEX, "utf8"));
+  const { files } = buildAll();
   if (process.argv.includes("--check")) {
     const diff = diffCore(files);
-    if (diff.length) { console.error("core/ nie zgadza się z public/index.html:\n  " + diff.join("\n  ") + "\nUruchom: node tools/sync-core.mjs"); process.exit(1); }
-    console.log(`core/ zgodne z public/index.html (${Object.keys(files).length} plików)`);
+    if (diff.length) { console.error("core/ nie zgadza się ze wzorcem:\n  " + diff.join("\n  ") + "\nUruchom: node tools/sync-core.mjs"); process.exit(1); }
+    console.log(`core/ zgodne ze wzorcem — public/index.html i api/ (${Object.keys(files).length} plików)`);
   } else {
     for (const [file, text] of Object.entries(files)) {
       fs.mkdirSync(path.dirname(path.join(CORE, file)), { recursive: true });
