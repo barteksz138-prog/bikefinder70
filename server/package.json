@@ -1,0 +1,19 @@
+{
+  "name": "dirtdealfinder-server",
+  "private": true,
+  "type": "module",
+  "description": "Skaner na serwerze: lokalna strona + Chrome bez okna + sterowanie z konsoli",
+  "scripts": {
+    "start": "node main.mjs",
+    "setup": "npm install && npx playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  },
+  "optionalDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
